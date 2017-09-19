@@ -1,0 +1,40 @@
+doctype html
+html
+  head
+    style.
+        //Below loads tweet plus a link to the tweet
+      h1{
+        background-color: black;
+        position: relative;
+        font-size: 22px;
+        color: blue;
+        width: 250px;
+        word-wrap: break-word;
+        top: 150px;
+        left: 150px;
+      }
+      h2{
+        text-align: center;
+        background-color: black;
+        position: relative;
+        font-size: 18px;
+        color: blue;
+        width: 150px;
+        word-wrap: break-word;
+        top: 250px;
+        left: 200px;
+      }
+    block content
+      h1= tweetage.text
+      h2 
+        a(href="https://twitter.com/" + tweetage.user.screen_name + "/status/" + tweetage.id_str) Tweet Link
+    
+    style(type='text/css').
+           body {
+                background: url('!{imageURI}');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center center;
+                height: 600px;
+            }
+  //body #{imageURI} This displayed the url of background image over the imag

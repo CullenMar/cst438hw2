@@ -1,12 +1,109 @@
 var express = require('express');
 var router = express.Router();
 var https = require('https');
+var btoa = require('btoa');
 
+//TWITTER
+var keys = {
+    client: process.env.TWITTER_KEY, 
+    secret: process.env.TWITTER_SECRET
+}
 
+var combined = keys.client + ":" + keys.secret; 
+var base64encoded = btoa(combined);
+
+function getAccessToken(handleAccessTokenResponse) {
+    const options = {
+        hostname: "api.twitter.com", 
+        port: 443, 
+        path: '/oauth2/token',
+        method: 'POST', 
+        headers: {
+            'Authorization': 'Basic ' + base64encoded, 
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        }
+    }; 
+    
+    var postData = 'grant_type=client_credentials'; 
+    var completeResponse = ''; 
+    
+    // Set up the request
+    var postReq = https.request(options, function(res) {
+      res.setEncoding('utf8');
+      res.on('data', function (chunk) {
+          completeResponse += chunk; 
+      });
+      
+      res.on('end', function() {
+            console.log("########################################"); 
+            console.log("status code: " + this.statusCode); 
+            //console.log("Complete response: " + completeResponse); 
+            var responseJSON = JSON.parse(completeResponse); 
+            var accessToken = responseJSON.access_token; 
+            
+            handleAccessTokenResponse(accessToken); 
+            
+            
+            /*execute callback*/
+            //sendBackResponseToBrowser(apiResponse); 
+            
+      }); 
+    });
+    
+    postReq.write(postData);
+    postReq.end();
+    
+}
+
+function getTweets(accessToken, sendResponseToBrowser) {
+    const options = {
+        hostname: "api.twitter.com", 
+        port: 443, 
+        path: '/1.1/search/tweets.json?q=donut',
+        method: 'GET', 
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    }; 
+    
+    var completeResponse = ''; 
+    
+    // Set up the request
+    var twitterRequest = https.request(options, function(twitterResponse) {
+      twitterResponse.setEncoding('utf8');
+      //chunk is all the data recieved from the twitter api!!!
+      twitterResponse.on('data', function (chunk) {
+          //console.log('Response: ' + chunk);
+          //why store chunk in variable complete response?
+          completeResponse += chunk; 
+      });
+      
+      twitterResponse.on('end', function() {
+            console.log("########################################"); 
+            console.log("status code: " + this.statusCode); 
+            //console.log("Complete response: " + completeResponse); 
+            
+            var responseJSON = JSON.parse(completeResponse); 
+            var tweetsList = responseJSON.statuses;
+            
+            var ranNum2 = Math.random() * tweetsList.length;
+            console.log(ranNum2);
+            console.log("num tweets: " + tweetsList.length);
+            
+            var tweet1 = tweetsList[parseInt(ranNum2)];
+            sendResponseToBrowser(tweet1); 
+      });
+    });
+    
+    twitterRequest.end();
+    
+}
+
+//GETTYIMAGES
 const options = {
-    hostname: "api.gettyimages.com", 
+    hostname: "api.gettyimages.com",
     port: 443, 
-    path: '/v3/search/images?fields=comp',
+    path: '/v3/search/images?fields=comp&phrase=donuts',
     method: 'GET', 
     headers: {
         'Api-Key': process.env.GETTY_API_KEY
@@ -31,9 +128,12 @@ function makeApiRequest(sendBackResponseToBrowser) {
             var images = responseJSON.images; 
             console.log(responseJSON); 
             console.log("num images: " + images.length); 
-            console.log("url of first image: " + images[0].display_sizes[0].uri); 
-            var imageURI = images[3].display_sizes[0].uri; 
+            console.log("url of first image: " + images[0].display_sizes[0].uri);
             
+            var ranNum = Math.random() * images.length;
+            console.log(ranNum);
+            
+            var imageURI = images[parseInt(ranNum)].display_sizes[0].uri; 
             sendBackResponseToBrowser(imageURI); 
             
         }); 
@@ -42,12 +142,18 @@ function makeApiRequest(sendBackResponseToBrowser) {
     }); 
 }
 
-/* GET home page. sets picture and url on webpage */
+/* GET home page. sets picture and url on webpage:: tweet included */
 router.get('/', function(req, res, next) {
   
-  makeApiRequest(function(imageURI){
-      res.render('getty', {imageURI: imageURI});
-  }); 
+  //twitter/getty combined
+  getAccessToken(function(accessToken) {
+    getTweets(accessToken, function(tweetage) {
+        
+        makeApiRequest(function(imageURI){
+            res.render('getty_twitter', {tweetage: tweetage, imageURI: imageURI});
+        });
+    }); 
+  });
    
 });
 
